@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card card-soft">
+    <div class="card-body">
+        <h2 class="h4 mb-3">{% if reservation %}Uredi rezervaciju{% else %}Nova rezervacija{% endif %}</h2>
+        {% if halls|length == 0 %}
+            <p>Nema dostupnih sala.</p>
+            <a class="btn btn-primary" href="{{ url_for('halls.hall_create') }}">Dodaj salu</a>
+        {% else %}
+        {% set fd = form_data or {} %}
+        {% set fe = form_errors or {} %}
+        {% set r = reservation if not form_data else none %}
+        <form method="post" class="row g-3" id="reservationForm">
+            <div class="col-md-6">
+                <label class="form-label" for="wedding_hall_id">Sala</label>
+                <select class="form-select {% if fe.get('wedding_hall_id') %}is-invalid{% endif %}" id="wedding_hall_id" name="wedding_hall_id" required>
+                    {% for h in halls %}
+                    <option value="{{ h.id }}" data-price="{{ h.price }}" data-capacity="{{ h.capacity }}"
+                        {% if fd.wedding_hall_id == h.id|string or (not form_data and r and r.wedding_hall.id == h.id) %}selected{% endif %}>
+                        {{ h.name }} ({{ h.location }})
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if fe.get('wedding_hall_id') %}<div class="invalid-feedback d-block">{{ fe.wedding_hall_id }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="date">Datum</label>
+                <input class="form-control {% if fe.get('date') %}is-invalid{% endif %}" id="date" type="date" name="date"
+                    {% if not allow_past_date %}min="{{ today }}"{% endif %}
+                    required value="{{ fd.date or (r.date if r else '') }}">
+                {% if fe.get('date') %}<div class="invalid-feedback d-block">{{ fe.date }}</div>{% endif %}
+                <small class="text-muted">Datum se ne može spremiti ako već postoji odobrena rezervacija za odabranu salu.</small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="bride_name">Ime i prezime mladenke</label>
+                <input class="form-control {% if fe.get('bride_name') %}is-invalid{% endif %}" id="bride_name" name="bride_name" type="text" value="{{ fd.bride_name or (r.bride_name if r else '') }}">
+                {% if fe.get('bride_name') %}<div class="invalid-feedback d-block">{{ fe.bride_name }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="groom_name">Ime i prezime mladoženje</label>
+                <input class="form-control {% if fe.get('groom_name') %}is-invalid{% endif %}" id="groom_name" name="groom_name" type="text" value="{{ fd.groom_name or (r.groom_name if r else '') }}">
+                {% if fe.get('groom_name') %}<div class="invalid-feedback d-block">{{ fe.groom_name }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="bride_contact">Kontakt mladenke</label>
+                <input class="form-control {% if fe.get('bride_contact') %}is-invalid{% endif %}" id="bride_contact" name="bride_contact" type="text" value="{{ fd.bride_contact or (r.bride_contact if r else '') }}">
+                {% if fe.get('bride_contact') %}<div class="invalid-feedback d-block">{{ fe.bride_contact }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="groom_contact">Kontakt mladoženja</label>
+                <input class="form-control {% if fe.get('groom_contact') %}is-invalid{% endif %}" id="groom_contact" name="groom_contact" type="text" value="{{ fd.groom_contact or (r.groom_contact if r else '') }}">
+                {% if fe.get('groom_contact') %}<div class="invalid-feedback d-block">{{ fe.groom_contact }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="guest_count">Broj gostiju <span id="capacity-label"></span></label>
+                <input class="form-control {% if fe.get('guest_count') %}is-invalid{% endif %}" id="guest_count" type="number" min="1" name="guest_count" required value="{{ fd.guest_count or (r.guest_count if r else '') }}">
+                {% if fe.get('guest_count') %}<div class="invalid-feedback d-block">{{ fe.guest_count }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="rental_price">Cijena najma (€)</label>
+                <input class="form-control readonly-field" id="rental_price" type="text" readonly>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="status">Status</label>
+                <select class="form-select {% if fe.get('status') %}is-invalid{% endif %}" id="status" name="status" required>
+                    {% set status_value = fd.status or (r.status if r else 'not approved') %}
+                    <option value="approved" {% if status_value == 'approved' %}selected{% endif %}>Odobrena</option>
+                    <option value="not approved" {% if status_value != 'approved' %}selected{% endif %}>Nije odobrena</option>
+                </select>
+                {% if fe.get('status') %}<div class="invalid-feedback d-block">{{ fe.status }}</div>{% endif %}
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Spremi</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('reservations.reservations_index') }}">Odustani</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% if halls|length > 0 %}
+<script>
+    const hallSelect = document.getElementById("wedding_hall_id");
+    const priceInput = document.getElementById("rental_price");
+    const guestCountInput = document.getElementById("guest_count");
+    const capacityLabel = document.getElementById("capacity-label");
+    function updateHallLimits() {
+        const selected = hallSelect.options[hallSelect.selectedIndex];
+        const price = selected.dataset.price || "";
+        const capacity = selected.dataset.capacity || "";
+        priceInput.value = price ? `${parseFloat(price).toFixed(2)} €` : "";
+        guestCountInput.max = capacity;
+        capacityLabel.textContent = capacity ? `(max ${capacity})` : "";
+    }
+    hallSelect.addEventListener("change", updateHallLimits);
+    updateHallLimits();
+</script>
+{% endif %}
+{% endblock %}
