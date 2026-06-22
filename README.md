@@ -293,7 +293,7 @@ Za pokretanje aplikacije potrebno je imati instaliran **Docker Desktop**.
 Projekt se najprije preuzima s GitHuba:
 
 ```bash
-git clone https://github.com/Mateokruljac/weeding-book.git
+git clone https://github.com/mkruljac-fipu/WeddingApp
 cd weeding-book
 ```
 
